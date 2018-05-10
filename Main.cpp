@@ -16,9 +16,20 @@
 
 #include "omp.h"
 
+#include <dlib/image_processing.h>
+#include <dlib/opencv/cv_image.h>
+
+#include <dlib/svm_threaded.h>
+#include <dlib/string.h>
+#include <dlib/gui_widgets.h>
+#include <dlib/image_processing.h>
+#include <dlib/data_io.h>
+#include <dlib/cmd_line_parser.h>
+
 using namespace cv;
 using namespace std;
 using namespace st;
+//using namespace dlib;
 
 //*************************************************************************************************
 // ----- This is a main source file it handles the whole process of tracking:
@@ -84,14 +95,24 @@ void _onMouse(int event, int x, int y, int flags, void* param) {
 
 //=================================================================================================
 int main() {
-	
+    cout<<"fuckyou"<<endl;
 	vector<vector<Point>> givenTrajectories;
 	#ifdef NOT_FROM_THE_BEGINING
 	TrajectoryAnalyzer::readFullTrajectory(givenTrajectories, 0.5, START_FRAME, 2997);
 	#else
 	TrajectoryAnalyzer::readFullTrajectory(givenTrajectories, 0.5, 0, 2997);
 	#endif
-
+    ////
+    /// \brief outFile
+    ///ryu init
+   typedef dlib::scan_fhog_pyramid<dlib::pyramid_down<6> > image_scanner_type;
+   cout << "Hello World!" << endl;
+   ifstream fin("/home/ryu/Documents/Project/Cmake/ball_19_04_25/data/trainfilm3/object_detector.svm", ios::binary);
+   dlib::object_detector<image_scanner_type> detector;
+   deserialize(detector, fin);
+   dlib::image_window win;
+   cv::Mat ryuMat;
+    ///
 	ofstream outFile[6];
 	stringstream sstm;
 
@@ -146,6 +167,7 @@ int main() {
 
 	// ----- create configurator to parse xml file with settings -----
 	Configurator* configurator = new Configurator("../data/config.xml");
+    cout<<" config here"<<endl;
 	// ----- create videoReader to read video from all cameras -----
 	st::VideoReader* videoReader = new VideoReader();
 	#ifdef WRITE_VIDEO
@@ -173,14 +195,14 @@ int main() {
 	scalePreview = 1.0 / 3; // preview size will be 640 x 360
 
 	// Camera Coordinates are not at the extreme corners. Origin is at top left
-	camHandler.addCamera(1, Point(1280, 540), scalePreview, Point3d(87.56, 67.928 + 34.52, 60.69));	// Original: 0, 540		
-	camHandler.addCamera(2, Point(1280, 180), scalePreview, Point3d(87.69, 67.928 - 103.14, 60.62));		// Original: 640, 540
+//	camHandler.addCamera(1, Point(1280, 540), scalePreview, Point3d(87.56, 67.928 + 34.52, 60.69));	// Original: 0, 540
+//	camHandler.addCamera(2, Point(1280, 180), scalePreview, Point3d(87.69, 67.928 - 103.14, 60.62));		// Original: 640, 540
 
-	camHandler.addCamera(3, Point(640, 540), scalePreview, Point3d(53.15, 67.928 + 34.13, 56.51));	// Original: 1280, 540
-	camHandler.addCamera(4, Point(640, 180), scalePreview, Point3d(52.37, 67.928 - 101.78, 57.93));		// Original: 0, 180		
+    camHandler.addCamera(3, Point(640, 540), scalePreview, Point3d(53.15, 67.928 + 34.13, 56.51));	// Original: 1280, 540
+//	camHandler.addCamera(4, Point(640, 180), scalePreview, Point3d(52.37, 67.928 - 101.78, 57.93));		// Original: 0, 180
 
-	camHandler.addCamera(5, Point(0, 540), scalePreview, Point3d(27.84, 67.928 + 33.97, 59.50));		// Original: 640, 180
-	camHandler.addCamera(6, Point(0, 180), scalePreview, Point3d(27.84, 67.928 - 102.09, 58.83));			// Original: 1280, 180
+//	camHandler.addCamera(5, Point(0, 540), scalePreview, Point3d(27.84, 67.928 + 33.97, 59.50));		// Original: 640, 180
+//	camHandler.addCamera(6, Point(0, 180), scalePreview, Point3d(27.84, 67.928 - 102.09, 58.83));			// Original: 1280, 180
 
 	camHandler.updateFSize();
 	vector<Camera*> allCameras = camHandler.getCameras();
@@ -282,6 +304,7 @@ int main() {
 				{
 					#pragma omp critical
 					pauseFlag = 1;
+                    cout<<"ryu end frame"<<endl;
 					continue;
 				};
 				
@@ -294,7 +317,9 @@ int main() {
 				#endif
 
 				// ========== preprocess frame ==========
-				resize(frame, frame, Size(960,540), 0, 0, INTER_AREA);
+
+                cv::cvtColor(frame,ryuMat,cv::COLOR_BGR2GRAY);
+                resize(frame, frame, Size(960,540), 0, 0, INTER_AREA);
 
 				if (horFlip) { flip(frame, frame, 1); } // !!!!! some source videos might be flipped !!!!!
 
@@ -319,9 +344,30 @@ int main() {
 				vector<Rect> players_cand;
 				vector<Point> ball_cand;
 				//
+                //ryu here
 
+//                cout<<"ryu "<<frame.size<<endl;
+                if(frame.rows > 0 && frame.cols>0)
+                {
+                    cout<<"ryu error "<<endl;
+
+
+                    dlib::array2d<unsigned char> dlibImageGray;
+                    dlib::assign_image(dlibImageGray, dlib::cv_image<unsigned char>(ryuMat));
+
+                    win.clear_overlay();
+                    win.set_image(dlibImageGray);
+//                    imshow("ryu test",dlibImageGray);
+                    cv::waitKey(1);
+                    std::vector<dlib::rectangle> rects = detector(dlibImageGray);
+                    cout<<"ryu rect:"<<rects.size()<<endl;
+                }
+
+//                if(rects)
+
+                //
 				//
-				cAnalyzer.process(mask, players_cand, ball_cand);
+//				cAnalyzer.process(mask, players_cand, ball_cand);
 				// ========== wait for permission to start tracking ==========
 				bool _flg = true;
 
@@ -409,9 +455,9 @@ int main() {
 			mcTracker.setFieldModel(model);
 			mcTracker.setCameras(allCameras);
 
-			namedWindow("modelView", CV_WINDOW_NORMAL);
-			namedWindow("cameraView", CV_WINDOW_AUTOSIZE);
-			setMouseCallback("cameraView", _onMouse);
+//			namedWindow("modelView", CV_WINDOW_NORMAL);
+//			namedWindow("cameraView", CV_WINDOW_AUTOSIZE);
+//			setMouseCallback("cameraView", _onMouse);
 
 			#ifdef WRITE_VIDEO
 			cv::VideoWriter vidWriter_all = videoWriter.getVideoWriter(-1);
@@ -445,8 +491,8 @@ int main() {
 					mcTracker.updateTrackData(trackInfo);
 					mcTracker.process(t_Error, globalFrameCount);
 					mcTracker.finalizeResults(modelPreview, cameraView);
-					imshow("modelView", modelPreview);
-					imshow("cameraView1", cameraView);
+//					imshow("modelView", modelPreview);
+//					imshow("cameraView1", cameraView);
 
 					#ifdef WRITE_VIDEO
 					resize(modelPreview, modelPreview, Size(gui_modelW, gui_modelH));
