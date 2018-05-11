@@ -356,12 +356,10 @@ int main() {
                     players_cand.clear();
                     for(int i=0; i<rects.size();i++)
                     {
-                        cv::Rect rect;
                         cv::Point2d tl(rects.at(i).left()/2,rects.at(i).top()/2);
                         cv::Point2d br(rects.at(i).right()/2+1,rects.at(i).bottom()/2+1);
                         players_cand.push_back(Rect(tl,br));
-                    }
-                    cout<<"player_can"<<players_cand.size();
+                    }                    cout<<"player_can"<<players_cand.size();
                 }
 //                cAnalyzer.process(mask, players_cand, ball_cand);
                 // ========== wait for permission to start tracking ==========
